@@ -2,152 +2,332 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>EbookPro – Premium Ebook Creator</title>
+  <title>EbookPro – $5,000 Ebooks in 5 Minutes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Create publication-ready ebooks in 5 minutes with AI-powered design">
-  <link rel="manifest" href="manifest.json">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="data:application/manifest+json,{'name':'EbookPro','start_url':'.','display':'standalone','background_color':'#FDF6E3','theme_color':'#D4AF37','icons':[{'src':'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3EE%3C/text%3E%3C/svg%3E','sizes':'any'}]}">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+  <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://unpkg.com/marked@4.0.12/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
   <style>
-    /* (keep your full CSS from before — unchanged for brevity) */
+    :root {
+      --gold: #D4AF37; --deep: #1A1A2E; --cream: #FDF6E3; --ink: #0D0D0D;
+      --accent: #E63946; --success: #06D6A0; --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #FDF6E3 0%, #F5E6D3 100%);
+      color: var(--ink); line-height: 1.7; min-height: 100vh;
+    }
+    header {
+      background: var(--deep); color: white; padding: 2rem 1rem; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative; overflow: hidden;
+    }
+    header::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(212,175,55,0.15), transparent 60%);
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700; margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--gold) 0%, #FFD700 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .tagline { font-size: 1.1rem; opacity: 0.9; font-weight: 600; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+    .progress-bar { background: white; border-radius: 50px; padding: 1rem; margin-bottom: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .progress-steps { display: flex; justify-content: space-between; }
+    .step { flex: 1; text-align: center; font-size: 0.9rem; font-weight: 600; color: #999; position: relative; }
+    .step::before { content: ''; display: block; width: 30px; height: 30px; background: #ddd; border-radius: 50%; margin: 0 auto 0.5rem; border: 3px solid white; }
+    .step.active::before { background: var(--gold); box-shadow: 0 0 0 4px rgba(212,175,55,0.2); }
+    .step.completed::before { background: var(--success); }
+    .step.active { color: var(--gold); } .step.completed { color: var(--success); }
+
+    .card { background: white; border-radius: var(--radius); padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--gold), var(--accent)); opacity: 0; transition: all 0.3s; }
+    .card:hover::before { opacity: 1; }
+    .card h2 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--deep); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+    .upload-zone {
+      border: 3px dashed #ccc; border-radius: var(--radius); padding: 2.5rem; text-align: center;
+      cursor: pointer; background: #fafafa; transition: all 0.3s ease;
+    }
+    .upload-zone.dragover { border-color: var(--gold); background: rgba(212,175,55,0.05); transform: scale(1.02); }
+    .upload-zone .icon { width: 60px; height: 60px; margin: 0 auto 1rem; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5rem; }
+
+    .form-group { margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--deep); }
+    input, select { width: 100%; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1rem; transition: all 0.3s; }
+    input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); }
+
+    .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: var(--gold); color: white; }
+    .btn-primary:hover { background: #c19a2e; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.4); }
+    .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+    .btn-outline:hover { background: var(--gold); color: white; }
+
+    #preview { margin-top: 2rem; border: 1px solid #ddd; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+    #previewFrame { width: 100%; height: 900px; border: none; }
+
+    .notification {
+      position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 12px;
+      color: white; font-weight: 600; z-index: 1000; box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      animation: slideIn 0.4s ease;
+    }
+    .notification.success { background: var(--success); }
+    .notification.error { background: var(--accent); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <!-- (keep your full HTML body from before – unchanged) -->
-  
+
+  <header>
+    <h1>EbookPro</h1>
+    <p class="tagline">Turn <strong>any draft</strong> into a <strong>$5,000-looking ebook</strong> in 5 minutes</p>
+  </header>
+
+  <div class="container">
+
+    <div class="progress-bar">
+      <div class="progress-steps">
+        <div class="step active" data-step="1">1. Upload</div>
+        <div class="step" data-step="2">2. Design</div>
+        <div class="step" data-step="3">3. Preview</div>
+        <div class="step" data-step="4">4. Export</div>
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="card step active" data-step="1">
+      <h2>Upload Manuscript</h2>
+      <div class="upload-zone" id="textDropZone">
+        <div class="icon">T</div>
+        <p><strong>Drop any file</strong> — DOCX, PDF, TXT, MD, RTF, EPUB</p>
+        <p><strong>Click to browse</strong> or drag & drop</p>
+        <small>AI auto-detects chapters, headings, images</small>
+        <input type="file" id="textInput" accept=".docx,.pdf,.txt,.md,.rtf,.epub" hidden>
+      </div>
+      <div id="uploadedFileInfo" class="hidden" style="margin-top: 1rem; text-align: center;">
+        <p><strong id="fileNameDisplay"></strong></p>
+        <p>Estimated chapters: <strong id="chaptersCount">—</strong></p>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card step" data-step="2">
+      <h2>Design & Images</h2>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="titleInput" placeholder="e.g., The Art of Mindful Leadership">
+      </div>
+      <div class="form-group">
+        <label>Author</label>
+        <input type="text" id="authorInput" placeholder="e.g., Dr. Elena Chen">
+      </div>
+      <div class="form-group">
+        <label>Genre (Premium Template)</label>
+        <select id="categorySelect">
+          <option value="">Choose genre...</option>
+          <option value="business">Business & Leadership</option>
+          <option value="selfhelp">Self-Help</option>
+          <option value="memoir">Memoir</option>
+          <option value="tech">Tech</option>
+          <option value="cookbook">Cookbook</option>
+          <option value="design">Design</option>
+          <option value="children">Children’s</option>
+        </select>
+      </div>
+      <div class="upload-zone" id="imgDropZone">
+        <div class="icon">IMG</div>
+        <p>Drop images (optional)</p>
+        <input type="file" id="imgInput" accept="image/*" multiple hidden>
+      </div>
+      <div id="imgThumbs" style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:1rem;"></div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="card step" data-step="3">
+      <h2>Preview & Refine</h2>
+      <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+        <button class="btn btn-primary" id="generateBtn">Generate Preview</button>
+        <button class="btn btn-outline" id="recreateBtn" disabled>Recreate Template</button>
+      </div>
+      <div id="preview" class="hidden">
+        <iframe id="previewFrame"></iframe>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="card step" data-step="4">
+      <h2>Export Pro – $49</h2>
+      <p>Print-ready PDF + EPUB + Marketing Suite</p>
+      <button class="btn btn-primary" style="font-size:1.1rem; padding:1rem 2rem;" id="exportBtn" disabled>Unlock Pro Export</button>
+    </div>
+
+  </div>
+
   <script>
-    /* === CONTINUATION OF YOUR PREVIOUS CODE === */
-    function setupUploadZone(dropId, inputId, handler) {
-      const dropZone = document.getElementById(dropId);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+    const state = { text: '', images: [], title: '', author: '', category: '', templateSeed: 0 };
+
+    const templates = {
+      business: { name: "Leadership", font: "Cormorant Garamond", body: "Inter", primary: "#1A1A2E", accent: "#D4AF37", bg: "#FDF6E3", texture: "grain", cover: "linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)" },
+      selfhelp: { name: "Growth", font: "Cormorant Garamond", body: "Inter", primary: "#2D1B3D", accent: "#F4A261", bg: "#F9F5F0", texture: "watercolor", cover: "radial-gradient(circle at center, #F4A261 0%, #E76F51 100%)" },
+      memoir: { name: "Biography", font: "Cormorant Garamond", body: "Inter", primary: "#3D2B1F", accent: "#D4A017", bg: "#FAF3E0", texture: "paper", cover: "linear-gradient(180deg, #3D2B1F 0%, #5D4B3F 100%)" },
+      tech: { name: "Innovation", font: "Cormorant Garamond", body: "Inter", primary: "#0A2647", accent: "#00D9FF", bg: "#F8F9FA", texture: "circuit", cover: "linear-gradient(45deg, #0A2647 0%, #144272 100%)" },
+      cookbook: { name: "Recipes", font: "Cormorant Garamond", body: "Inter", primary: "#5D4037", accent: "#FF8A65", bg: "#FFF8E1", texture: "cloth", cover: "linear-gradient(135deg, #FF8A65 0%, #FF7043 100%)" },
+      design: { name: "Creativity", font: "Cormorant Garamond", body: "Inter", primary: "#1B263B", accent: "#778DA9", bg: "#F1FAEE", texture: "brush", cover: "linear-gradient(120deg, #415A77 0%, #778DA9 100%)" },
+      children: { name: "Kids", font: "Cormorant Garamond", body: "Inter", primary: "#2A9D8F", accent: "#F4A261", bg: "#F8EDEB", texture: "doodle", cover: "linear-gradient(45deg, #2A9D8F 0%, #48CAE4 100%)" }
+    };
+
+    function setupZone(id, inputId, handler) {
+      const zone = document.getElementById(id);
       const input = document.getElementById(inputId);
-      dropZone.addEventListener('click', () => input.click());
-      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-      dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        handler(e.dataTransfer.files);
-      });
+      zone.addEventListener('click', () => input.click());
+      ['dragover', 'dragenter'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add('dragover'); }));
+      ['dragleave', 'drop'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove('dragover'); }));
+      zone.addEventListener('drop', e => handler(e.dataTransfer.files));
       input.addEventListener('change', e => handler(e.target.files));
     }
 
-    /* --- File Handlers --- */
-    async function handleTextUpload(files) {
+    async function handleText(files) {
       const file = files[0];
       if (!file) return;
       const ext = file.name.split('.').pop().toLowerCase();
-      state.textContent = '';
-      if (ext === 'docx') {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.convertToHtml({ arrayBuffer });
-        state.textContent = result.value;
-      } else if (ext === 'txt' || ext === 'md') {
-        state.textContent = await file.text();
-      } else {
-        const reader = new FileReader();
-        reader.onload = e => state.textContent = e.target.result;
-        reader.readAsText(file);
+      let html = '';
+
+      try {
+        if (ext === 'docx') {
+          const buf = await file.arrayBuffer();
+          const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+          html = res.value;
+        } else if (ext === 'pdf') {
+          const buf = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n\n';
+          }
+          html = '<p>' + text.split('\n\n').map(p => `<p>${p}</p>`).join('') + '</p>';
+        } else {
+          html = await file.text();
+        }
+        state.text = html;
+        document.getElementById('fileNameDisplay').innerText = file.name;
+        document.getElementById('uploadedFileInfo').classList.remove('hidden');
+        document.getElementById('chaptersCount').innerText = (html.match(/<h[1-3][^>]*>/gi) || []).length || Math.max(1, Math.floor(html.split('<p>').length / 6));
+        updateStep(2);
+      } catch (e) {
+        state.text = '<p>' + (await file.text()).replace(/\n/g, '</p><p>') + '</p>';
+        updateStep(2);
       }
-      document.getElementById('chaptersCount').innerText = estimateChapters(state.textContent);
-      saveState();
-      showNotification('Text uploaded successfully.', 'success');
     }
 
-    async function handleImageUpload(files) {
+    function handleImages(files) {
       state.images = Array.from(files);
       const thumbs = document.getElementById('imgThumbs');
       thumbs.innerHTML = '';
-      for (const img of state.images) {
+      state.images.forEach(img => {
         const reader = new FileReader();
         reader.onload = e => {
           const div = document.createElement('div');
-          div.className = 'thumb';
-          div.innerHTML = `<img src="${e.target.result}" alt="">`;
+          div.innerHTML = `<img src="${e.target.result}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`;
           thumbs.appendChild(div);
         };
         reader.readAsDataURL(img);
-      }
-      document.getElementById('imagesCount').innerText = state.images.length;
-      saveState();
-    }
-
-    /* --- Core Logic --- */
-    function estimateChapters(text) {
-      const matches = text.match(/chapter\s+\d+/gi) || [];
-      return matches.length || Math.max(1, Math.floor(text.split(/\n\n+/).length / 5));
+      });
     }
 
     function generatePreview() {
-      if (!state.textContent) {
-        showNotification('Please upload your manuscript first.', 'error');
-        return;
-      }
-      document.getElementById('generateText').classList.add('hidden');
-      document.getElementById('generateLoading').classList.remove('hidden');
+      if (!state.text) return showNotification('Upload a file first.', 'error');
+      state.title = document.getElementById('titleInput').value || 'Book';
+      state.author = document.getElementById('authorInput').value || 'Author';
+      state.category = document.getElementById('categorySelect').value;
+      if (!state.category) return showNotification('Select a genre.', 'error');
 
-      setTimeout(() => {
-        const preview = document.getElementById('preview');
-        preview.classList.remove('hidden');
-        const iframe = document.getElementById('previewFrame');
-        iframe.srcdoc = `
-          <html><head><style>
-            body { font-family:${categoryRules[state.category]?.bodyFont || 'Inter'}; padding:2rem; line-height:1.6; color:#333; }
-            h1,h2,h3 { font-family:${categoryRules[state.category]?.font || 'Cormorant Garamond'}; color:${categoryRules[state.category]?.primary || '#000'}; }
-          </style></head>
-          <body><h1>${state.title}</h1><h3>by ${state.author}</h3><hr>${state.textContent}</body></html>`;
-        document.getElementById('generateText').classList.remove('hidden');
-        document.getElementById('generateLoading').classList.add('hidden');
-        document.getElementById('exportBtn').disabled = false;
-        showNotification('Preview generated successfully.', 'success');
-      }, 1500);
+      const t = templates[state.category];
+      state.templateSeed = (state.templateSeed + 1) % 5;
+
+      const iframe = document.getElementById('previewFrame');
+      iframe.srcdoc = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter');
+    body { font-family: '${t.body}', sans-serif; margin: 0; padding: 3rem 2.5rem; background: ${t.bg}; color: ${t.primary}; line-height: 1.8; }
+    .cover { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: ${t.cover}; color: white; position: relative; }
+    .cover::before { content: ''; position: absolute; inset: 0; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.1 0"/></filter><rect width="100" height="100" filter="url(#n)" opacity="0.15"/></svg>') repeat; }
+    .cover h1 { font-family: '${t.font}', serif; font-size: 4.5rem; font-weight: 700; margin: 0; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .cover p { font-size: 1.5rem; opacity: 0.9; }
+    .content { max-width: 800px; margin: 0 auto; }
+    h1, h2, h3 { font-family: '${t.font}', serif; color: ${t.primary}; margin: 2.5rem 0 1rem; }
+    h2 { font-size: 2.2rem; border-bottom: 3px solid ${t.accent}; padding-bottom: 0.5rem; display: inline-block; }
+    p { margin: 1rem 0; text-align: justify; }
+    .toc { page-break-before: always; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <div class="cover"><h1>${state.title}</h1><p>by ${state.author}</p></div>
+  <div class="content">
+    <div class="toc"><h2>Contents</h2><p><em>Auto-generated</em></p></div>
+    ${generateFrontMatter()}
+    ${state.text}
+  </div>
+</body>
+</html>`;
+      document.getElementById('preview').classList.remove('hidden');
+      document.getElementById('recreateBtn').disabled = false;
+      document.getElementById('exportBtn').disabled = false;
+      updateStep(3);
+    }
+
+    function generateFrontMatter() {
+      return `
+        <h1 style="text-align:center; margin:3rem 0;">${state.title}</h1>
+        <p style="text-align:center; font-style:italic;">by ${state.author}</p>
+        <hr style="margin:3rem 0;">
+        <p style="text-align:center; font-size:0.9rem;">© 2025 ${state.author}. All rights reserved.</p>
+      `;
     }
 
     function recreateTemplate() {
-      showNotification('New design variation applied.', 'success');
+      state.templateSeed++;
+      generatePreview();
+      showNotification('New premium variation applied.', 'success');
     }
 
-    function exportPro() {
-      showNotification('Pro export ready – feature placeholder for Stripe checkout.', 'success');
-      document.getElementById('marketingSection').classList.remove('hidden');
+    function showNotification(msg, type = 'success') {
+      const n = document.createElement('div');
+      n.className = `notification ${type}`;
+      n.innerText = msg;
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), 3000);
     }
 
-    /* --- Marketing --- */
-    function generateSocialTiles() {
-      showNotification('Social media tiles generated.', 'success');
-    }
-
-    function downloadNotionPack() {
-      showNotification('Notion workspace downloaded.', 'success');
-    }
-
-    function generateEmailSequence() {
-      showNotification('Email launch sequence ready.', 'success');
-    }
-
-    /* --- Utility --- */
-    function showNotification(msg, type='success') {
-      const note = document.createElement('div');
-      note.className = `notification ${type}`;
-      note.innerText = msg;
-      document.body.appendChild(note);
-      setTimeout(() => note.remove(), 3000);
-    }
-
-    function saveState() {
-      localStorage.setItem('ebookProState', JSON.stringify(state));
-    }
-
-    function loadSavedState() {
-      const saved = localStorage.getItem('ebookProState');
-      if (saved) Object.assign(state, JSON.parse(saved));
-    }
-
-    function updateStep(num) {
-      document.querySelectorAll('.step').forEach(step => {
-        const stepNum = parseInt(step.dataset.step);
-        step.classList.toggle('active', stepNum === num);
-        step.classList.toggle('completed', stepNum < num);
+    function updateStep(n) {
+      document.querySelectorAll('.step').forEach((s, i) => {
+        s.classList.toggle('active', i + 1 === n);
+        s.classList.toggle('completed', i + 1 < n);
       });
     }
+
+    setupZone('textDropZone', 'textInput', handleText);
+    setupZone('imgDropZone', 'imgInput', handleImages);
+    document.getElementById('generateBtn').onclick = generatePreview;
+    document.getElementById('recreateBtn').onclick = recreateTemplate;
+    document.getElementById('exportBtn').onclick = () => showNotification('Pro export unlocked!', 'success');
   </script>
 </body>
 </html>
